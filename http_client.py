@@ -48,6 +48,7 @@ class HttpClient:
         except ConnectionError as connection_error:
             print(f'Calling {method} {url} failed with ConnectionError: {connection_error}')
             raise connection_error
+
         if response.status_code != 200:
             self.handle_non_success_response(response)
 
