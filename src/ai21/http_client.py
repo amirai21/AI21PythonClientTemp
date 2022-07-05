@@ -1,14 +1,12 @@
 import json
 from typing import Optional, Dict
 import requests
-from requests.adapters import HTTPAdapter, Response, Retry
+from requests.adapters import HTTPAdapter, Response, Retry, RetryError
 
 from data_types import ClientConfigs
 
 DEFAULT_TIMEOUT_SEC = 30
-DEFAULT_NUM_RETRIES = 2
-
-MAX_RETRY = 2
+DEFAULT_NUM_RETRIES = 0
 MAX_RETRY_FOR_SESSION = 2
 BACK_OFF_FACTOR = 0.3
 TIME_BETWEEN_RETRIES = 1000
@@ -21,6 +19,9 @@ def handle_non_success_response(response: Response):
     if response.status_code == 401:
         print('401')
         raise Exception('AI21 Unauthorized exception TBD')
+    if response.status_code == 422:
+        print('422')
+        raise Exception('AI21 Unprocessable entity exception TBD')
     if response.status_code == 400:
         print('400')
         raise Exception('AI21 bad request exception TBD')
@@ -37,7 +38,7 @@ def requests_retry_session(session, retries=0):
                   status_forcelist=ERROR_CODES,
                   method_whitelist=frozenset(['GET', 'POST']))
     adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
+    # We have only https protocol support in the API, so no need to mount http
     session.mount('https://', adapter)
     return session
 
@@ -47,13 +48,10 @@ class HttpClient:
         self.timeout_sec = configs.timeout_sec if configs and configs.timeout_sec else DEFAULT_TIMEOUT_SEC
         self.num_retries = configs.num_retries if configs and configs.num_retries else DEFAULT_NUM_RETRIES
         self.headers = configs.headers if configs and configs.headers else {}
+        self.apply_retry_policy = self.num_retries > 0
 
-    def execute_http_request(
-            self,
-            method: str,
-            url: str,
-            params: Optional[Dict] = None):
-        session = requests_retry_session(requests.Session(), retries=self.num_retries)
+    def execute_http_request(self, method: str, url: str, params: Optional[Dict] = None):
+        session = requests_retry_session(requests.Session(), retries=self.num_retries) if self.apply_retry_policy else requests.Session()
         timeout = self.timeout_sec
         headers = self.headers
         data = json.dumps(params).encode()
@@ -63,6 +61,9 @@ class HttpClient:
         except ConnectionError as connection_error:
             print(f'Calling {method} {url} failed with ConnectionError: {connection_error}')
             raise connection_error
+        except RetryError as retry_error:
+            print(f'Calling {method} {url} failed with RetryError: {retry_error}')
+            raise retry_error
         except Exception as exception:
             print(f'Calling {method} {url} failed with Exception: {exception}')
             raise exception
