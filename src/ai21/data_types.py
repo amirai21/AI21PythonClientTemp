@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
 
 @dataclass
@@ -31,3 +31,12 @@ class CompletionParams:
     countPenalty: Optional[Penalty] = Penalty(scale=0)
     frequencyPenalty: Optional[Penalty] = Penalty(scale=0)
     presencePenalty: Optional[Penalty] = Penalty(scale=0)
+
+
+@dataclass
+class DatasetMetadata:
+    dataset_name: str
+    selected_columns: Optional[Tuple[str, str]] = None
+    approve_whitespace_correction: Optional[bool] = False
+    delete_long_rows: Optional[bool] = False
+    split_ratio: Optional[float] = 0.1

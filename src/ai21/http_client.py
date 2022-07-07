@@ -8,9 +8,10 @@ from data_types import ClientConfigs
 DEFAULT_TIMEOUT_SEC = 30
 DEFAULT_NUM_RETRIES = 0
 MAX_RETRY_FOR_SESSION = 2
-BACK_OFF_FACTOR = 0.3
+RETRY_BACK_OFF_FACTOR = 0.3
 TIME_BETWEEN_RETRIES = 1000
-ERROR_CODES = (500, 502, 504, 422)
+RETRY_ERROR_CODES = (500, 429, 504, 422)
+RETRY_METHOD_WHITELIST = ['GET', 'POST', 'PUT']
 
 
 def handle_non_success_response(response: Response):
@@ -33,13 +34,11 @@ def handle_non_success_response(response: Response):
 
 
 def requests_retry_session(session, retries=0):
-    retry = Retry(total=retries, read=retries, connect=retries,
-                  backoff_factor=BACK_OFF_FACTOR,
-                  status_forcelist=ERROR_CODES,
-                  method_whitelist=frozenset(['GET', 'POST']))
+    retry = Retry(total=retries, read=retries, connect=retries, backoff_factor=RETRY_BACK_OFF_FACTOR,
+                  status_forcelist=RETRY_ERROR_CODES, method_whitelist=frozenset(RETRY_METHOD_WHITELIST))
     adapter = HTTPAdapter(max_retries=retry)
-    # We have only https protocol support in the API, so no need to mount http
     session.mount('https://', adapter)
+    session.mount('http://', adapter)
     return session
 
 
@@ -50,14 +49,23 @@ class HttpClient:
         self.headers = configs.headers if configs and configs.headers else {}
         self.apply_retry_policy = self.num_retries > 0
 
-    def execute_http_request(self, method: str, url: str, params: Optional[Dict] = None):
+    def execute_http_request(self, method: str, url: str, params: Optional[Dict] = None, files=None):
         session = requests_retry_session(requests.Session(), retries=self.num_retries) if self.apply_retry_policy else requests.Session()
         timeout = self.timeout_sec
         headers = self.headers
         data = json.dumps(params).encode()
         try:
             print(f'Calling {method} {url} {data}')
-            response = session.request(method, url, headers=headers, data=data, timeout=timeout)
+            if method == 'GET':
+                response = session.request(method, url, headers=headers, timeout=timeout)
+            elif files is not None:
+                if method != 'POST':
+                    raise Exception(f'execute_http_request supports only POST for files upload, but {method} was supplied instead')
+                if 'Content-Type' in headers:
+                    headers.pop('Content-Type')  # multipart/form-data 'Content-Type' will be added when passing rb files and payload
+                response = session.request(method, url, headers=headers, data=params, files=files, timeout=timeout)
+            else:
+                response = session.request(method, url, headers=headers, data=data, timeout=timeout)
         except ConnectionError as connection_error:
             print(f'Calling {method} {url} failed with ConnectionError: {connection_error}')
             raise connection_error
