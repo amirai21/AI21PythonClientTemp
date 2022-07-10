@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version_file_path = f'{os.path.abspath(os.path.dirname(__file__))}/src/ai21/version.py'
+version_file_path = f'{os.path.abspath(os.path.dirname(__file__))}/ai21/version.py'
 
 version_file = {}
 with open(version_file_path, "rt") as f:

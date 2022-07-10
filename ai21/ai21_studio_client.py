@@ -1,12 +1,13 @@
 from typing import Optional
 from data_types import ClientConfigs
 from http_client import HttpClient
-from src.ai21.constants import DEFAULT_API_VERSION
-from src.ai21.errors import InputValidationException
-from src.ai21.modules.completion import Completion
-from src.ai21.modules.custom_model import CustomModel
-from src.ai21.modules.dataset import Dataset
-from src.ai21.version import __version__
+from constants import DEFAULT_API_VERSION, STUDIO_HOST
+from errors import InputValidationException
+from modules.completion import Completion
+from modules.custom_model import CustomModel
+from modules.dataset import Dataset
+from modules.tokenize import Tokenize
+from version import __version__
 SUPPORTED_API_VERSIONS = ['v1']
 
 
@@ -19,12 +20,9 @@ class AI21StudioClient:
         if api_version is None:
             api_version = DEFAULT_API_VERSION
         self.api_version = api_version
-        user_pid = params.get('user_id', None)
-        if user_pid is not None:
-            self.user_pid = user_pid
-        app_name = params.get('app_name', None)
-        if app_name is not None:
-            self.app_name = app_name
+        application = params.get('application', None)
+        if application is not None:
+            self.application = application
         default_headers = self.build_default_headers()
         if not configs:
             configs = ClientConfigs()
@@ -32,17 +30,21 @@ class AI21StudioClient:
             configs.headers = {}
         configs.headers.update(default_headers)
         http_client = HttpClient(configs)
-        # Initializing all supported API modules:
-        self.completion = Completion(http_client, api_version)
-        self.custom_model = CustomModel(http_client, api_version)
-        self.dataset = Dataset(http_client, api_version)
+        api_host = configs.api_host if configs.api_host is not None else STUDIO_HOST
+        # Initializing API modules:
+        self.completion = Completion(http_client, api_version, api_host)
+        self.custom_model = CustomModel(http_client, api_version, api_host)
+        self.dataset = Dataset(http_client, api_version, api_host)
+        self.tokenize = Tokenize(http_client, api_version, api_host)
 
     def build_user_agent(self):
         return f'AI21 Studio {self.api_version} API Client version {__version__}'
 
     def build_default_headers(self):
-        return {
+        headers = {
             'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json',
             'User-Agent': self.build_user_agent()
         }
+        return headers
+

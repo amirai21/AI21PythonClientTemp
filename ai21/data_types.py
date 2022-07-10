@@ -3,7 +3,18 @@ from typing import Optional, Dict, List, Tuple
 
 
 @dataclass
+class AI21StudioResponse:
+    data: Dict
+    headers: Dict
+    execution_time: float
+
+    def __str__(self):
+        return f'AI21StudioResponse: execution_time: {self.execution_time} seconds, data: {self.data}, response headers: {self.headers}'
+
+
+@dataclass
 class ClientConfigs:
+    api_host: Optional[int] = None
     timeout_sec: Optional[int] = None
     num_retries: Optional[int] = None
     headers: Optional[Dict] = None

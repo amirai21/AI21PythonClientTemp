@@ -1,14 +1,14 @@
-from src.ai21.constants import DEFAULT_API_VERSION, STUDIO_HOST
-from src.ai21.data_types import Penalty
-from src.ai21.http_client import HttpClient
-from src.ai21.modules.studio_api_module import AI21StudioModule
-from src.ai21.errors import InputValidationException
-from src.ai21.utils import to_dict, measure_execution_time
+from typing import Dict
+
+from ai21.data_types import Penalty
+from ai21.http_client import HttpClient
+from ai21.errors import InputValidationException
+from ai21.utils import to_dict, build_ai21studio_response
 
 COMPLETION_MODULE_NAME = 'complete'
 
 
-def validate_input(params):
+def validate_input(params: Dict):
     prompt = params.get('prompt', None)
     if prompt is None:
         raise InputValidationException('prompt is required for the completion request')
@@ -26,12 +26,12 @@ def validate_input(params):
 
 class Completion:
 
-    def __init__(self, http_client: HttpClient, api_version: str = DEFAULT_API_VERSION):
+    def __init__(self, http_client: HttpClient, api_version: str, api_host: str):
         self.api_version = api_version
         self.http_client = http_client
-        self.base_url = f'{STUDIO_HOST}/studio/{api_version}'
+        self.base_url = f'{api_host}/studio/{api_version}'
 
-    @measure_execution_time
+    @build_ai21studio_response
     def complete(self, model_name: str, **params):
         validate_input(**params)
         return self.http_client.execute_http_request(method='POST', url=f'{self.base_url}/{model_name}/complete', **params)
