@@ -42,7 +42,7 @@ def requests_retry_session(session, retries=0):
     return session
 
 
-class HttpClient:
+class AsyncHttpClient:
     def __init__(self, configs: Optional[ClientConfigs] = None):
         self.timeout_sec = configs.timeout_sec if configs and configs.timeout_sec else DEFAULT_TIMEOUT_SEC
         self.num_retries = configs.num_retries if configs and configs.num_retries else DEFAULT_NUM_RETRIES

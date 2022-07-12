@@ -3,7 +3,7 @@ from typing import Optional, Dict
 import requests
 from requests.adapters import HTTPAdapter, Response, Retry, RetryError
 
-from data_types import ClientConfigs
+from ai21.data_types import ClientConfigs
 from ai21.errors import BadRequest, Unauthorized, UnprocessableEntity, TooManyRequests, ServerError, ServiceUnavailable, AI21HttpException
 
 DEFAULT_TIMEOUT_SEC = 30

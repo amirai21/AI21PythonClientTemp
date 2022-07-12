@@ -1,1 +1,1 @@
-from ai21.modules import *
+api_key_global = 'no value'
